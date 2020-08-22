@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import  Modal  from '../component/modal';
 import Table from '../component/table'
-import { Field, FieldArray, reduxForm } from 'redux-form'
+import {connect} from 'react-redux'
+import { Field, FieldArray, reduxForm, getFormValues } from 'redux-form'
 
 
 const renderField = ({ input, label, type, meta: { touched, error } }) => (
@@ -13,18 +14,24 @@ const renderField = ({ input, label, type, meta: { touched, error } }) => (
       </div>
     </div>
   );
-  
+  function CustomFileInput  ( field, {input}) {
+    const [file, setFile] = useState([])
+    function onChangeFile(e) {
+      setFile(e.target.files[0])
+    }
+    delete field.input.value; // <-- just delete the value property
+    return <input {...input} type="file" id="file" {...field.input.value}   onChange={onChangeFile}/>;
+  };
+
   
 function Renderfiles ({ fields,i }) {
     return (
        
   <div>
-    <Field
-          name={`${fields.name}.${i}.fileDocument`}
-          type="file"
-          component={renderField}
-          label="file"
-        />
+        <Field 
+            name={`${fields.name}.${i}.fileDocument`}
+            type="file"
+            component={CustomFileInput}/>
         <Field
           name={`${fields.name}.${i}.descriptioFile`}
           type="text"
@@ -43,7 +50,7 @@ function Renderfiles ({ fields,i }) {
 
 
 
-function FileUpload({ fields ,handleSubmit, pristine, reset, submitting }) {
+function FileUpload({ fields ,handleSubmit, pristine, reset, submitting, values }) {
   const [showForm, setShowForm] = useState(false);
   const [filesUploaded, setFilesUploaded] = useState([]);
   const [file, setFile] = useState([])
@@ -56,23 +63,11 @@ function FileUpload({ fields ,handleSubmit, pristine, reset, submitting }) {
     { title: 'Date de réception', property: 'DDR' },
     { title: 'Aperçu', property: 'apercu' },
   ]
+  console.log('values' , values)
   const addFile = (e) => {
-      
-    e.preventDefault()
-    const list = [...filesUploaded, fields]
-    const newFile = {
-      file: file,
-      fileDocument: file.name,
-      descriptioFile: descriptioFile,
-      DDR: dateReception,
-      apercu: ''
-    }
-    //list.push(newFile)
-    setFilesUploaded(list)
-    console.log('liiiist', fields)
-    setShowForm(false)
+  setFilesUploaded(values.files)
   seti(i+1);
-
+  setShowForm(false)
   };
   const modeAddFile = () => {
     setShowForm(true);}
@@ -91,7 +86,8 @@ function FileUpload({ fields ,handleSubmit, pristine, reset, submitting }) {
           data={filesUploaded}
           buttons
           edit={elem => console.log(elem)}
-          delete={(elem) =>console.log(elem)}
+          delete={(row) =>{const newData = filesUploaded.filter(elem => elem != row)
+            setFilesUploaded(newData)}}
           pageSize={0}
         />
         <Modal
@@ -120,4 +116,11 @@ function FileUpload({ fields ,handleSubmit, pristine, reset, submitting }) {
   );
 }
 
-export default reduxForm({form: "MyForm" ,  fields: ['fileDocument', 'descriptioFile','DDR' ,'apercu']})(FileUpload);
+const rdxfrm = reduxForm({form: "MyForm" })
+
+const cnct = connect(state =>( {
+  values: getFormValues('MyForm')(state)
+}))(FileUpload)
+
+export default rdxfrm(cnct)
+
